@@ -2,9 +2,7 @@ import os
 import sys
 import warnings
 
-# Tắt các cảnh báo DeprecationWarning và UserWarning
 warnings.filterwarnings("ignore")
-# Tắt log của transformers
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
