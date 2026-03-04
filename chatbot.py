@@ -3,7 +3,6 @@ import sys
 import shutil
 import warnings
 
-# Tắt các cảnh báo DeprecationWarning và UserWarning
 warnings.filterwarnings("ignore")
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -29,7 +28,6 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
-# Tắt warning ghi đè của thư viện Transformers
 import transformers
 transformers.logging.set_verbosity_error()
 
@@ -41,7 +39,7 @@ class WordWrapCallbackHandler(BaseCallbackHandler):
     """Callback tùy chỉnh gom các chữ cái thành từ (word) để không bị cắt làm đôi khi chạm mép màn hình terminal."""
     def __init__(self):
         self.word_buffer = ""
-        self.current_line_len = 9  # Bù độ dài cho cụm "ChatBot: " ban đầu
+        self.current_line_len = 9  
         self.terminal_width = shutil.get_terminal_size((80, 20)).columns - 2
 
     def on_llm_new_token(self, token: str, **kwargs) -> None:
@@ -49,7 +47,6 @@ class WordWrapCallbackHandler(BaseCallbackHandler):
             if char.isspace():
                 word_len = len(self.word_buffer)
                 if word_len > 0:
-                    # Nếu in từ này ra mà làm tràn màn hình thì ta xuống dòng trước khi in
                     if self.current_line_len + word_len >= self.terminal_width:
                         sys.stdout.write("\n")
                         self.current_line_len = 0
@@ -57,8 +54,6 @@ class WordWrapCallbackHandler(BaseCallbackHandler):
                     sys.stdout.write(self.word_buffer)
                     self.current_line_len += word_len
                     self.word_buffer = ""
-                
-                # In trực tiếp khoảng trắng, tab, newline
                 sys.stdout.write(char)
                 if char == "\n":
                     self.current_line_len = 0
@@ -78,8 +73,6 @@ class WordWrapCallbackHandler(BaseCallbackHandler):
 
 def init_chatbot():
     print("ChatBot Loading...", end="", flush=True)
-    
-    # Hide all output from model loading
     import io
     old_stdout = sys.stdout
     old_stderr = sys.stderr
@@ -163,8 +156,6 @@ def chat_loop():
         try:
             print("Đang suy nghĩ...")
             print("ChatBot:\n", end="", flush=True)
-            
-            # Gọi invoke cùng callback word-wrap để tự động kiểm soát việc xuống dòng
             rag_chain.invoke(
                 {"input": user_input},
                 config={"callbacks": [WordWrapCallbackHandler()]}
@@ -177,3 +168,4 @@ def chat_loop():
 
 if __name__ == "__main__":
     chat_loop()
+    
