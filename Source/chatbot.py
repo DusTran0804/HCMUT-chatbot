@@ -31,101 +31,68 @@ class WordWrapCallbackHandler(BaseCallbackHandler):
     """Callback tùy chỉnh gom các chữ cái thành từ để không bị cắt đôi khi chat terminal."""
     def __init__(self):
         self.word_buffer = ""
-        self.current_line_len = 9  
         self.terminal_width = shutil.get_terminal_size((80, 20)).columns - 2
 
     def on_llm_new_token(self, token: str, **kwargs) -> None:
-        for char in token:
-            if char.isspace():
-                word_len = len(self.word_buffer)
-                if word_len > 0:
-                    if self.current_line_len + word_len >= self.terminal_width:
-                        sys.stdout.write("\n")
-                        self.current_line_len = 0
-                    sys.stdout.write(self.word_buffer)
-                    self.current_line_len += word_len
-                    self.word_buffer = ""
-                sys.stdout.write(char)
-                if char == "\n":
-                    self.current_line_len = 0
-                else:
-                    self.current_line_len += 1
-            else:
-                self.word_buffer += char
-        sys.stdout.flush()
-
-    def on_llm_end(self, *args, **kwargs) -> None:
-        if self.word_buffer:
-            if self.current_line_len + len(self.word_buffer) >= self.terminal_width:
-                sys.stdout.write("\n")
-            sys.stdout.write(self.word_buffer)
-            self.word_buffer = ""
+        sys.stdout.write(token)
         sys.stdout.flush()
 
 def init_chatbot():
     print("ChatBot Loading...", end="", flush=True)
     
-    # Hide all output from model loading
-    import io
-    old_stdout = sys.stdout
-    old_stderr = sys.stderr
-    sys.stdout = io.StringIO()
-    sys.stderr = io.StringIO()
+    # 1. Chẩn đoán danh sách Model (Quan trọng để sửa lỗi 404)
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("\n❌ LỖI: Không tìm thấy GEMINI_API_KEY trong môi trường!")
+        raise ValueError("GEMINI_API_KEY not found!")
     
     try:
-        # Load API Key (lấy từ env var trên Render hoặc file .env local)
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-             raise ValueError("GEMINI_API_KEY not found in environment!")
-        
-        # --- DIAGNOSTIC: List available models ---
-        try:
-            genai.configure(api_key=api_key)
-            print("\n--- DANH SÁCH MODEL KHẢ DỤNG ---")
-            for m in genai.list_models():
-                if 'generateContent' in m.supported_generation_methods:
-                    print(f"Model: {m.name}")
-            print("--------------------------------\n")
-        except Exception as diag_e:
-            print(f"Lỗi khi liệt kê model: {diag_e}")
+        genai.configure(api_key=api_key)
+        print("\n\n--- DANH SÁCH MODEL KHẢ DỤNG CHO KEY CỦA BẠN ---")
+        model_found = False
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                print(f"Model ID: {m.name}")
+                model_found = True
+        if not model_found:
+            print("⚠️ CẢNH BÁO: Không tìm thấy model nào khả dụng cho Key này!")
+        print("----------------------------------------------\n")
+    except Exception as diag_e:
+        print(f"\n❌ Lỗi khi liệt kê model: {diag_e}")
 
-        # 1. Load Vector DB dùng Google Embeddings
+    # 2. Khởi tạo Embeddings và Database
+    try:
         embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
         db = Chroma(persist_directory=persist_directory, embedding_function=embeddings_model)
+        retriever = db.as_retriever(search_type="mmr", search_kwargs={"k": 5})
         
-        # 2. Retriever (MMR strategy)
-        retriever = db.as_retriever(
-            search_type="mmr",
-            search_kwargs={"k": 10, "fetch_k": 30}
+        # 3. Sử dụng Gemini 1.5 Flash (Hoặc model bạn vừa thấy trong log)
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
+        
+        # 4. Thiết lập Prompt
+        system_prompt = (
+            "Bạn là một chuyên gia AI trả lời câu hỏi cực kỳ chi tiết, rõ ràng và logic. "
+            "CHỈ sử dụng các đoạn trích xuất (ngữ cảnh) dưới đây để trả lời câu hỏi. "
+            "Nếu câu trả lời không có trong ngữ cảnh, hãy nói 'Tôi không biết'. "
+            "Luôn luôn trả lời bằng TIẾNG VIỆT tự nhiên."
+            "\n\n--- Ngữ cảnh ---\n{context}"
         )
         
-        # 3. Sử dụng Gemini 1.5 Flash (Phiên bản mới nhất, cần library bản mới)
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
-    finally:
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human", "{input}"),
+        ])
         
-    print(" Done!")
-    
-    # 3. Prompt Template
-    system_prompt = (
-        "Bạn là một chuyên gia AI trả lời câu hỏi cực kỳ chi tiết, rõ ràng và logic. "
-        "CHỈ sử dụng các đoạn trích xuất (ngữ cảnh) dưới đây để trả lời câu hỏi. "
-        "Nếu câu trả lời không có trong ngữ cảnh, hãy nói 'Tôi không biết'. "
-        "Luôn luôn trả lời bằng TIẾNG VIỆT tự nhiên."
-        "\n\n--- Ngữ cảnh ---\n{context}"
-    )
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human", "{input}"),
-    ])
-    
-    # 4. Chain it all together
-    question_answer_chain = create_stuff_documents_chain(llm, prompt)
-    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-    
-    return rag_chain
+        # 5. Tạo Chain
+        question_answer_chain = create_stuff_documents_chain(llm, prompt)
+        rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+        
+        print(" Done!")
+        return rag_chain
+
+    except Exception as e:
+        print(f"\n❌ Lỗi trong quá trình khởi tạo AI: {e}")
+        raise e
 
 def chat_loop():
     if not os.path.exists(persist_directory):
@@ -138,17 +105,15 @@ def chat_loop():
         print(f"Error initializing chatbot: {e}")
         return
         
-    print("\n🤖 Chatbot đã sẵn sàng (Gemini Cloud mode)!")
+    print("\n🤖 Chatbot đã sẵn sàng!")
     while True:
         user_input = input("Bạn: ")
         if user_input.lower() in ['exit', 'quit']: break
         if not user_input.strip(): continue
         try:
             print("ChatBot:\n", end="", flush=True)
-            rag_chain.invoke(
-                {"input": user_input},
-                config={"callbacks": [WordWrapCallbackHandler()]}
-            )
+            result = rag_chain.invoke({"input": user_input})
+            print(result.get("answer", ""))
             print("\n")
         except Exception as e:
             print(f"Lỗi: {e}")
