@@ -16,6 +16,7 @@ import logging
 logging.getLogger("langchain").setLevel(logging.ERROR)
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+import google.generativeai as genai
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_community.vectorstores import Chroma
 from langchain_classic.chains import create_retrieval_chain
@@ -76,6 +77,17 @@ def init_chatbot():
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
              raise ValueError("GEMINI_API_KEY not found in environment!")
+        
+        # --- DIAGNOSTIC: List available models ---
+        try:
+            genai.configure(api_key=api_key)
+            print("\n--- DANH SÁCH MODEL KHẢ DỤNG ---")
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    print(f"Model: {m.name}")
+            print("--------------------------------\n")
+        except Exception as diag_e:
+            print(f"Lỗi khi liệt kê model: {diag_e}")
 
         # 1. Load Vector DB dùng Google Embeddings
         embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
