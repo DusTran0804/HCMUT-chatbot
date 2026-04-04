@@ -2,7 +2,7 @@ services:
   - type: web
     name: hcmut-chatbot
     env: python
-    buildCommand: pip install -r requirements.txt && python Source/ingest.py sample_data.txt
+    buildCommand: pip install -r requirements.txt && python Source/ingest.py Input_data/sample_data.txt
     startCommand: gunicorn -w 1 -k uvicorn.workers.UvicornWorker --timeout 300 webapp:app
     envVars:
       - key: GEMINI_API_KEY

@@ -26,7 +26,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 # Set up paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
-persist_directory = os.path.join(current_dir, "chroma_db")
+persist_directory = os.path.join(os.path.dirname(current_dir), "chroma_db")
 
 import shutil
 
