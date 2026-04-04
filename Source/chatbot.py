@@ -87,8 +87,8 @@ def init_chatbot():
             search_kwargs={"k": 10, "fetch_k": 30}
         )
         
-        # 3. Sử dụng Gemini Pro (Ổn định nhất)
-        llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.2)
+        # 3. Sử dụng Gemini 1.5 Flash (Phiên bản mới nhất, cần library bản mới)
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
     finally:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
