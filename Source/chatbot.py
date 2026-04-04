@@ -2,40 +2,32 @@ import os
 import sys
 import shutil
 import warnings
+from dotenv import load_dotenv
 
+# Load các biến môi trường từ file .env nếu có (cho chạy local)
+load_dotenv()
+
+# Tắt các cảnh báo DeprecationWarning và UserWarning
 warnings.filterwarnings("ignore")
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
-os.environ["TRANSFORMERS_VERBOSITY"] = "error"
-os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
 
 import logging
-logging.getLogger("transformers").setLevel(logging.ERROR)
-logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
 logging.getLogger("langchain").setLevel(logging.ERROR)
 
-import os
-os.environ["HF_HUB_OFFLINE"] = "1"
-import huggingface_hub.utils as hf_utils
-hf_utils.logging.set_verbosity_error()
-
-from langchain_community.chat_models import ChatOllama
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_classic.chains import create_retrieval_chain
+from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
-import transformers
-transformers.logging.set_verbosity_error()
-
-# Setup paths
+# Setup paths - Lấy thư mục cha của Source/ làm gốc cho chroma_db
 current_dir = os.path.dirname(os.path.abspath(__file__))
-persist_directory = os.path.join(current_dir, "chroma_db")
+persist_directory = os.path.join(os.path.dirname(current_dir), "chroma_db")
 
 class WordWrapCallbackHandler(BaseCallbackHandler):
+    """Callback tùy chỉnh gom các chữ cái thành từ để không bị cắt đôi khi chat terminal."""
     def __init__(self):
         self.word_buffer = ""
         self.current_line_len = 9  
@@ -49,7 +41,6 @@ class WordWrapCallbackHandler(BaseCallbackHandler):
                     if self.current_line_len + word_len >= self.terminal_width:
                         sys.stdout.write("\n")
                         self.current_line_len = 0
-                    
                     sys.stdout.write(self.word_buffer)
                     self.current_line_len += word_len
                     self.word_buffer = ""
@@ -72,6 +63,8 @@ class WordWrapCallbackHandler(BaseCallbackHandler):
 
 def init_chatbot():
     print("ChatBot Loading...", end="", flush=True)
+    
+    # Hide all output from model loading
     import io
     old_stdout = sys.stdout
     old_stderr = sys.stderr
@@ -79,35 +72,44 @@ def init_chatbot():
     sys.stderr = io.StringIO()
     
     try:
-        embeddings_model = HuggingFaceEmbeddings(model_name="paraphrase-multilingual-MiniLM-L12-v2")
+        # Load API Key (lấy từ env var trên Render hoặc file .env local)
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+             raise ValueError("GEMINI_API_KEY not found in environment!")
+
+        # 1. Load Vector DB dùng Google Embeddings
+        embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
         db = Chroma(persist_directory=persist_directory, embedding_function=embeddings_model)
         
+        # 2. Retriever (MMR strategy)
         retriever = db.as_retriever(
             search_type="mmr",
-            search_kwargs={
-                "k": 10,
-                "fetch_k": 30
-            }
+            search_kwargs={"k": 10, "fetch_k": 30}
         )
-
-        llm = ChatOllama(model="llama3", temperature=0.2)
+        
+        # 3. Sử dụng Gemini 1.5 Flash
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
     finally:
         sys.stdout = old_stdout
         sys.stderr = old_stderr
         
     print(" Done!")
     
+    # 3. Prompt Template
     system_prompt = (
-        "You are a helpful assistant. Use the following pieces of retrieved context to "
-        "answer the question. If you don't know the answer, say that you don't know.\n\n"
-        "Context: {context}"
+        "Bạn là một chuyên gia AI trả lời câu hỏi cực kỳ chi tiết, rõ ràng và logic. "
+        "CHỈ sử dụng các đoạn trích xuất (ngữ cảnh) dưới đây để trả lời câu hỏi. "
+        "Nếu câu trả lời không có trong ngữ cảnh, hãy nói 'Tôi không biết'. "
+        "Luôn luôn trả lời bằng TIẾNG VIỆT tự nhiên."
+        "\n\n--- Ngữ cảnh ---\n{context}"
     )
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         ("human", "{input}"),
     ])
-
+    
+    # 4. Chain it all together
     question_answer_chain = create_stuff_documents_chain(llm, prompt)
     rag_chain = create_retrieval_chain(retriever, question_answer_chain)
     
@@ -115,41 +117,29 @@ def init_chatbot():
 
 def chat_loop():
     if not os.path.exists(persist_directory):
-         print("ERROR: Vector database not found. Please run `python ingest.py` first!")
+         print(f"ERROR: Database vector không tìm thấy tại {persist_directory}!")
          return
-        
+  
     try:
         rag_chain = init_chatbot()
     except Exception as e:
-        print(f"Error initializing chatbot. Make sure Ollama is running! Details: {e}")
+        print(f"Error initializing chatbot: {e}")
         return
         
-    print("\n" + "="*50)
-    print("Chatbot is already!")
-    print("Please ask. Type 'exit' or 'quit' to out.")
-    print("="*50 + "\n")
-    
-    # Enter the loop
+    print("\n🤖 Chatbot đã sẵn sàng (Gemini Cloud mode)!")
     while True:
-        user_input = input("You: ")
-        if user_input.lower() in ['exit', 'quit']:
-            break
-        if not user_input.strip():
-            continue
-            
+        user_input = input("Bạn: ")
+        if user_input.lower() in ['exit', 'quit']: break
+        if not user_input.strip(): continue
         try:
-            print("Thinking...")
             print("ChatBot:\n", end="", flush=True)
             rag_chain.invoke(
                 {"input": user_input},
                 config={"callbacks": [WordWrapCallbackHandler()]}
             )
             print("\n")
-            
         except Exception as e:
-            print(f"Error {e}")
-            print("(`ollama pull llama3`)?")
+            print(f"Lỗi: {e}")
 
 if __name__ == "__main__":
     chat_loop()
-    

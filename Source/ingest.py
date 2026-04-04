@@ -22,7 +22,7 @@ hf_utils.logging.set_verbosity_error()
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 # Set up paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -67,7 +67,14 @@ def ingest_data(file_path):
     sys.stderr = io.StringIO()
     
     try:
-        embeddings_model = HuggingFaceEmbeddings(model_name="paraphrase-multilingual-MiniLM-L12-v2")
+        # Load API Key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+             # Ingest will fail if key is not provided (required for Google Embeddings)
+             raise ValueError("GEMINI_API_KEY not found in environment!")
+
+        # Chuyển sang Google Embeddings (miễn phí, không cần tải model nặng về RAM server)
+        embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
         
         # Save the chunks to a local Chroma database
         db = Chroma.from_documents(

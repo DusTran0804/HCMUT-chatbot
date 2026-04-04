@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatBot HCMUT - Trợ lý AI</title>
+    <!-- Nhúng CSS -->
+    <link rel="stylesheet" href="/style.css">
+    <!-- Google Fonts cho thiết kế hiện đại -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Material Symbols (Icons) -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <!-- Marked.js để render Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <!-- Khung giao diện chính (Glass Panel) -->
+    <div class="chat-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="header-content">
+                <div class="bot-avatar">
+                   <img src="/bk_logo.png" alt="BK Logo" />
+                </div>
+                <div class="header-titles">
+                    <h1>Trợ Lý ảo HCMUT</h1>
+                    <p><span class="online-dot"></span> Luôn sẵn sàng hỗ trợ</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Area hiển thị danh sách tin nhắn -->
+        <main class="chat-box" id="chat-box">
+            <!-- Tin nhắn chào mừng tự động -->
+            <div class="message bot-message">
+                <div class="message-content">
+                    <p>Xin chào! Mình là Trợ lý AI từ trường Đại học Bách Khoa TP.HCM.</p>
+                    <p>Mình có thể giải đáp các thông tin về cơ sở vật chất, lịch sử, các khoa và nhiều dữ liệu liên quan khác. Hãy đặt câu hỏi cho mình nhé!</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Thanh nhập dữ liệu gõ chữ (Footer) -->
+        <footer class="chat-footer">
+            <form id="chat-form">
+                <input type="text" id="user-input" placeholder="Bạn muốn hỏi gì nào?..." autocomplete="off"/>
+                <button type="submit" id="send-btn">
+                    <span class="material-icons-outlined">send</span>
+                </button>
+            </form>
+        </footer>
+    </div>
+    
+    <!-- Script xử lý Logic (Gọi API, Typing Effect...) -->
+    <script src="/script.js"></script>
+</body>
+</html>
