@@ -19,7 +19,7 @@
 body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-dark);
-    background-image: url('/hcmut_bg.jpg');
+    background-image: url('hcmut_bg.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
