@@ -66,8 +66,8 @@ def init_chatbot():
         db = Chroma(persist_directory=persist_directory, embedding_function=embeddings_model)
         retriever = db.as_retriever(search_type="mmr", search_kwargs={"k": 5})
         
-        # 3. Sử dụng Gemini 1.5 Flash (Hoặc model bạn vừa thấy trong log)
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.2)
+        # 3. Sử dụng Gemini 3.1 Flash (Model mạnh nhất bạn đang có)
+        llm = ChatGoogleGenerativeAI(model="gemini-3.1-flash-lite-preview", temperature=0.2)
         
         # 4. Thiết lập Prompt
         system_prompt = (
