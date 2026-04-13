@@ -22,13 +22,13 @@ async def lifespan(app: FastAPI):
     Khởi tạo chatbot AI khi ứng dụng bắt đầu và dọn dẹp khi kết thúc.
     """
     global rag_chain
-    print("🚀 Đang khởi khởi tạo Hệ thống AI Chatbot (Gemini Cloud mode)... Vui lòng chờ...")
+    print("Hệ thống AI Chatbot đang khởi động")
     try:
         # Thực hiện việc nạp RAG chain (Khá nặng, mất khoảng 30-60s trên Render Free)
         rag_chain = init_chatbot()
-        print("✅ Khởi tạo Chatbot thành công! Hệ thống đã sẵn sàng phục vụ.")
+        print("Khởi tạo Chatbot thành công!")
     except Exception as e:
-        print(f"❌ Lỗi nghiêm trọng khi khởi tạo Chatbot: {e}")
+        print(f"Lỗi khi khởi tạo Chatbot: {e}")
     
     yield
     # Dọn dẹp tài nguyên nếu cần khi server tắt
@@ -61,7 +61,7 @@ async def chat_endpoint(request: ChatRequest):
         # Nếu bộ não AI chưa nạp được, trả về lỗi 503 (Service Unavailable)
         raise HTTPException(
             status_code=503, 
-            detail="Hệ thống AI đang khởi động hoặc chưa sẵn sàng. Vui lòng thử lại sau 30 giây."
+            detail="Vui lòng thử lại sau."
         )
     
     user_input = request.message
@@ -71,7 +71,7 @@ async def chat_endpoint(request: ChatRequest):
     try:
         # Gọi Gemini AI kèm theo ngữ cảnh từ Vector DB
         result = rag_chain.invoke({"input": user_input})
-        answer = result.get("answer", "Xin lỗi, tôi không tìm được câu trả lời phù hợp trong dữ liệu huấn luyện.")
+        answer = result.get("answer", "Tôi không biết")
         return {"answer": answer}
     except Exception as e:
         print(f"Lỗi khi xử lý hội thoại: {e}")
@@ -86,5 +86,5 @@ if os.path.exists(static_dir):
 if __name__ == "__main__":
     # Render cung cấp cổng qua biến môi trường PORT
     port = int(os.environ.get("PORT", 8000))
-    print(f"🚀 Started on port {port}")
+    print(f"Started on port {port}")
     uvicorn.run("webapp:app", host="0.0.0.0", port=port, reload=False)
