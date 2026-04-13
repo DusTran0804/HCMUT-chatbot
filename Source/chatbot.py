@@ -43,7 +43,7 @@ def init_chatbot():
     # 1. Chẩn đoán danh sách Model (Quan trọng để sửa lỗi 404)
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("\n❌ LỖI: Không tìm thấy GEMINI_API_KEY trong môi trường!")
+        print("Không tìm thấy GEMINI_API_KEY trong môi trường!")
         raise ValueError("GEMINI_API_KEY not found!")
     
     try:
@@ -55,10 +55,10 @@ def init_chatbot():
                 print(f"Model ID: {m.name}")
                 model_found = True
         if not model_found:
-            print("⚠️ CẢNH BÁO: Không tìm thấy model nào khả dụng cho Key này!")
+            print("Không tìm thấy model nào khả dụng cho Key này!")
         print("----------------------------------------------\n")
     except Exception as diag_e:
-        print(f"\n❌ Lỗi khi liệt kê model: {diag_e}")
+        print(f"\n Lỗi khi liệt kê model: {diag_e}")
 
     # 2. Khởi tạo Embeddings và Database
     try:
@@ -91,7 +91,7 @@ def init_chatbot():
         return rag_chain
 
     except Exception as e:
-        print(f"\n❌ Lỗi trong quá trình khởi tạo AI: {e}")
+        print(f"\n Lỗi trong quá trình khởi tạo AI: {e}")
         raise e
 
 def chat_loop():
