@@ -104,11 +104,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 await streamBotText(data.answer);
             } else {
-                addMessage('❌ Lỗi xử lý từ hệ thống.', 'bot');
+                addMessage('Lỗi xử lý từ hệ thống.', 'bot');
             }
         } catch (error) {
             removeLoading();
-            addMessage('❌ Lỗi kết nối server (Có thể server Render đang ngủ, hãy chờ 30s và thử lại).', 'bot');
+            addMessage('Lỗi kết nối server.', 'bot');
         } finally {
             userInput.disabled = false;
             sendBtn.disabled = false;
