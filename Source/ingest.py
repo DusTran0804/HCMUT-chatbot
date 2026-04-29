@@ -24,7 +24,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-# Set up paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
 persist_directory = os.path.join(os.path.dirname(current_dir), "chroma_db")
 
@@ -35,17 +34,14 @@ def ingest_data(file_path):
         print(f"Error: The file {file_path} does not exist.")
         return
 
-    # Clear out the old database so the bot only remembers the new file
     if os.path.exists(persist_directory):
         shutil.rmtree(persist_directory)
 
     print("Chatbot Loading...", end="", flush=True)
     
-    # 1. Load the document
     loader = TextLoader(file_path)
     documents = loader.load()
     
-    # 2. Split the document into chunks
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=100,
@@ -53,30 +49,20 @@ def ingest_data(file_path):
         add_start_index=True,
     )
     chunks = text_splitter.split_documents(documents)
-    
-    # 3. Create Vector Store (Database)
-    
-    # We use a free, local, open-source embedding model from HuggingFace
+   
     import io
     import sys
     
-    # Hide all output from model loading
     old_stdout = sys.stdout
     old_stderr = sys.stderr
     sys.stdout = io.StringIO()
     sys.stderr = io.StringIO()
     
     try:
-        # Load API Key
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-             # Ingest will fail if key is not provided (required for Google Embeddings)
              raise ValueError("GEMINI_API_KEY not found in environment!")
-
-        # Chuyển sang Google Embeddings (miễn phí, không cần tải model nặng về RAM server)
         embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
-        
-        # Save the chunks to a local Chroma database
         db = Chroma.from_documents(
             documents=chunks,
             embedding=embeddings_model,
@@ -91,7 +77,6 @@ def ingest_data(file_path):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python ingest.py <path_to_your_text_file>")
-        print("Example: python ingest.py my_own_dataset.txt")
     else:
         file_path = sys.argv[1]
         ingest_data(file_path)
