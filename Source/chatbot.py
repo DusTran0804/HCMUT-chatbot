@@ -6,10 +6,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-warnings.filterwarnings("ignore")
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
 import logging
 logging.getLogger("langchain").setLevel(logging.ERROR)
 
