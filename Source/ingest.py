@@ -1,5 +1,7 @@
 import os
 import sys
+import shutil
+import gc
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,22 +13,26 @@ from langchain_core.documents import Document as LangchainDocument
 from llama_index.core import SimpleDirectoryReader
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core.schema import ImageDocument
+from llama_index.core.llms import ChatMessage, MessageRole
+from llama_index.core.base.llms.types import ImageBlock, TextBlock
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 persist_directory = os.path.join(os.path.dirname(current_dir), "chroma_db")
 
-import shutil
-
 def ingest_data(file_path):
     if not os.path.exists(file_path):
         return
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not found in environment!")
 
     if os.path.exists(persist_directory):
         shutil.rmtree(persist_directory)
 
     try:
         if os.path.isdir(file_path):
-            llama_docs = SimpleDirectoryReader(input_dir=file_path, recursive=True).load_data()
+            llama_docs = SimpleDirectoryReader(input_dir=file_path, recursive=True, exclude_hidden=False).load_data()
         else:
             llama_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
     except Exception as e:
@@ -41,10 +47,6 @@ def ingest_data(file_path):
     
     gemini_mm = None
     if has_image:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY not found in environment!")
- 
         gemini_mm = GoogleGenAI(
             model="gemini-2.5-flash", 
             api_key=api_key,
@@ -64,11 +66,25 @@ def ingest_data(file_path):
                 "Hãy làm tương tự cho TOÀN BỘ các dòng trong bảng. Đừng bỏ sót một dòng nào!"
             )
             try:
-                response = gemini_mm.complete(prompt=prompt, image_documents=[doc])
-                content = f"Hình ảnh/Sơ đồ ({doc.metadata.get('file_name', '')}):\nMô tả chi tiết:\n{response.text}"
-                documents.append(LangchainDocument(page_content=content, metadata={"source": doc.metadata.get("file_name", file_path)}))
+                img_path = getattr(doc, "image_path", None)
+                if not img_path:
+                    img_path = doc.metadata.get("file_path", None)
+                
+                if img_path and os.path.exists(img_path):
+                    msg = ChatMessage(
+                        role=MessageRole.USER,
+                        blocks=[
+                            TextBlock(text=prompt),
+                            ImageBlock(path=img_path)
+                        ]
+                    )
+                    response = gemini_mm.chat([msg])
+                    content = f"Hình ảnh/Sơ đồ ({doc.metadata.get('file_name', '')}):\nMô tả chi tiết:\n{response.message.content}"
+                    documents.append(LangchainDocument(page_content=content, metadata={"source": doc.metadata.get("file_name", file_path)}))
+                else:
+                    documents.append(LangchainDocument(page_content=doc.text, metadata={"source": doc.metadata.get("file_name", file_path)}))
             except Exception as e:
-                pass
+                print(f"Error processing image {doc.metadata.get('file_name', '')}: {e}")
         else:
             documents.append(LangchainDocument(page_content=doc.text, metadata={"source": doc.metadata.get("file_name", file_path)}))
 
@@ -84,10 +100,6 @@ def ingest_data(file_path):
     chunks = text_splitter.split_documents(documents)
 
     try:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-             raise ValueError("GEMINI_API_KEY not found in environment!")
-
         embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
   
         db = Chroma(
@@ -95,7 +107,6 @@ def ingest_data(file_path):
             embedding_function=embeddings_model
         )
 
-        import gc
         del llama_docs
         del documents
         gc.collect()
