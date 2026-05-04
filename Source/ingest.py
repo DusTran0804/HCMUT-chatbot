@@ -56,7 +56,7 @@ def ingest_data(file_path):
 
     for doc in llama_docs:
         # Check if the document is an image
-        if isinstance(doc, ImageDocument) or getattr(doc, "image_path", None) is not None or doc.metadata.get("file_name", "").lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+        if isinstance(doc, ImageDocument) or getattr(doc, "image_path", None) is not None or doc.metadata.get("file_name", "").lower().endswith(('.png', '.JPG', '.jpeg', '.webp')):
             prompt = (
                 "Bạn là một chuyên gia phân tích tài liệu. Hãy trả lời câu hỏi dựa trên các đoạn văn bản được cung cấp." 
                 "Bạn là một cỗ máy trích xuất dữ liệu quang học (OCR). " 
