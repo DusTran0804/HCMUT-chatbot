@@ -41,7 +41,7 @@ def ingest_data(file_path):
     documents = []
   
     has_image = any(
-        isinstance(d, ImageDocument) or d.metadata.get("file_name", "").lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))
+        isinstance(d, ImageDocument) or d.metadata.get("file_name", "").lower().endswith(('.png', '.JPG', '.jpeg', '.webp'))
         for d in llama_docs
     )
     
