@@ -43,10 +43,11 @@ def ingest_data(file_path):
     for doc in llama_docs:
         if isinstance(doc, ImageDocument) or getattr(doc, "image_path", None) is not None or doc.metadata.get("file_name", "").lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
             prompt = (
-                "Bạn là một chuyên gia phân tích dữ liệu và sơ đồ. "
-                "Hãy phân tích và mô tả cực kỳ chi tiết hình ảnh, sơ đồ hoặc bảng biểu này. "
-                "Đừng bỏ sót bất kỳ văn bản, số liệu, cột, dòng hay mối quan hệ nào trong hình. "
-                "Cung cấp bản mô tả rõ ràng để một hệ thống tìm kiếm (RAG) có thể hiểu hoàn toàn nội dung của hình ảnh này."
+               "Bạn là một hệ thống trích xuất dữ liệu chuyên nghiệp. "
+                "Hãy trích xuất toàn bộ văn bản, số liệu, bảng biểu có trong hình ảnh này. "
+                "Đặc biệt chú ý: Nếu hình ảnh chứa BẢNG BIỂU (Table), TUYỆT ĐỐI KHÔNG dùng định dạng kẻ bảng Markdown. "
+                "Thay vào đó, hãy liệt kê từng dòng thành một câu văn hoàn chỉnh, lặp lại đầy đủ ngữ cảnh từ tiêu đề bảng.\n"
+                "Hãy làm tương tự cho tất cả các dòng để hệ thống RAG không bị mất ngữ cảnh khi dữ liệu bị cắt nhỏ."
             )
             try:
                 response = gemini_mm.complete(prompt=prompt, image_documents=[doc])
@@ -61,8 +62,8 @@ def ingest_data(file_path):
         return
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=100,
+        chunk_size=1500,
+        chunk_overlap=300,
         length_function=len,
         add_start_index=True,
     )
