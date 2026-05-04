@@ -48,7 +48,7 @@ def ingest_data(file_path):
     gemini_mm = None
     if has_image:
         gemini_mm = GoogleGenAI(
-            model="gemini-2.5-flash", 
+            model="gemini-2.0-flash", 
             api_key=api_key,
             temperature=0.0, 
             max_tokens=8192  
