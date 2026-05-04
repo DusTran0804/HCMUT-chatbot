@@ -37,8 +37,9 @@ def ingest_data(file_path):
     if has_image:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-             raise ValueError("GEMINI_API_KEY not found!")
-         gemini_mm = GoogleGenAI(
+            raise ValueError("GEMINI_API_KEY not found in environment!")
+
+        gemini_mm = GoogleGenAI(
             model="gemini-2.5-flash", 
             api_key=api_key,
             temperature=0.0, 
