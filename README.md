@@ -1,38 +1,36 @@
-# RAG Chatbot với Ollama (Llama 3) & Langchain
+# Multimodal RAG Chatbot với Google Gemini & LlamaIndex
 
-Đây là một dự án Chatbot hỏi đáp dựa trên tài liệu (RAG - Retrieval-Augmented Generation) sử dụng **Ollama (mô hình Llama 3)**, **Langchain**, và **ChromaDB**. 
+Đây là một dự án Chatbot hỏi đáp dựa trên tài liệu (RAG - Retrieval-Augmented Generation) tiên tiến, có khả năng xử lý **đa phương thức (Multimodal)** bao gồm văn bản và hình ảnh/sơ đồ/bảng biểu. Dự án đã được chuyển đổi từ mô hình cục bộ sang sử dụng sức mạnh của **Google Gemini API**, kết hợp với các framework **Langchain**, **LlamaIndex** và cơ sở dữ liệu vector **ChromaDB**.
 
-Chatbot có khả năng đọc dữ liệu từ một tệp văn bản (`.txt`), lưu trữ vào cơ sở dữ liệu vector từ và trả lời các câu hỏi của bạn dựa trên nội dung đó.
+Dự án cung cấp cả giao diện dòng lệnh (CLI) và một API web server sử dụng **FastAPI**, sẵn sàng để triển khai trên các nền tảng đám mây như Render.
+
+## Tính năng nổi bật
+- **Multimodal RAG (Xử lý hình ảnh & tài liệu)**: Khả năng đọc và trích xuất thông tin cực kỳ chính xác từ hình ảnh, sơ đồ và bảng biểu bằng model `gemini-2.5-flash` thông qua LlamaIndex (`ChatMessage` và `ImageBlock`).
+- **Hỏi đáp thông minh**: Sử dụng model `gemini-3.1-flash-lite-preview` mạnh mẽ để tổng hợp ngữ cảnh và trả lời các câu hỏi phức tạp dựa trên dữ liệu đã nạp.
+- **Vector Database**: Sử dụng `ChromaDB` cục bộ và `GoogleGenerativeAIEmbeddings` (`gemini-embedding-001`) để tối ưu hóa việc phân mảnh (chunking) và tìm kiếm ngữ cảnh.
+- **Web API & Web App**: Tích hợp FastAPI để chạy dưới dạng API Server, phục vụ ứng dụng web tĩnh và cung cấp API RESTful cho frontend.
+
+---
 
 ## Yêu cầu hệ thống (Prerequisites)
 
 Trước khi chạy chương trình, bạn cần đảm bảo máy tính đã cài đặt:
 1. **Python 3.8+**
-2. **Ollama**: Tải và cài đặt từ [ollama.com](https://ollama.com/)
-3. **Mô hình Llama 3 trên Ollama**:
-   Mở terminal / command prompt và chạy lệnh sau để tải mô hình:
-   ```bash
-   ollama run llama3
-   ```
-   *(Hãy kiểm tra để chắc chắn Ollama đang chạy ngầm trên máy của bạn).*
+2. **Gemini API Key**: Đăng ký và lấy API Key miễn phí tại [Google AI Studio](https://aistudio.google.com/).
 
-## Môi trường cài đặt
-
-Dự án này sử dụng môi trường ảo (`venv`) để quản lý các thư viện.
+*(Lưu ý: Bạn không cần cài đặt Ollama hay Llama 3 cục bộ nữa, mọi xử lý mô hình ngôn ngữ đều chạy qua Google Cloud).*
 
 ---
 
 ## Hướng dẫn cài đặt và thiết lập (Setup)
 
-### Bước 1: Tải mã nguồn từ GitHub (Clone the repo)
-
+### Bước 1: Tải mã nguồn
 Mở Terminal và chạy lệnh sau để tải toàn bộ mã nguồn về máy:
 
 ```bash
 git clone <ĐƯỜNG_DẪN_GITHUB_CỦA_BẠN>
-cd chatbot
+cd ChatBotHCMUT
 ```
-*(Lưu ý: Thay `<ĐƯỜNG_DẪN_GITHUB_CỦA_BẠN>` bằng URL repo GitHub của dự án).*
 
 ### Bước 2: Tạo môi trường ảo (Virtual Environment)
 Khuyến nghị tạo một môi trường ảo có tên là `venv`:
@@ -51,53 +49,64 @@ python3 -m venv venv
   ```
 
 ### Bước 4: Cài đặt các thư viện cần thiết
-Hiện tại mã nguồn sử dụng các thư viện như `langchain`, `langchain-community`, `chromadb`, và `sentence-transformers`. Hãy chạy lệnh sau (hoặc lệnh tương đương dựa trên tệp `requirements.txt` nếu có):
+Cài đặt tất cả các dependencies từ file `requirements.txt`:
 ```bash
-pip install langchain langchain-community langchain-core chromadb sentence-transformers huggingface-hub
+pip install -r requirements.txt
+```
+
+### Bước 5: Cấu hình API Key
+Tạo một file `.env` ở thư mục gốc của dự án (cùng cấp với `README.md`) và thêm Gemini API Key của bạn vào:
+```env
+GEMINI_API_KEY=your_api_key_here
 ```
 
 ---
 
 ## Cách chạy chương trình
 
-Dự án này hoạt động theo 2 bước:
-1. Đọc tệp dữ liệu văn bản và nạp vào cơ sở dữ liệu (Ingest).
-2. Chạy bot để bắt đầu chat (Chat).
+Dự án này hoạt động theo 2 bước chính:
+1. **Nạp dữ liệu (Ingest)**: Đọc thư mục/tệp (văn bản, hình ảnh, tài liệu) và nạp vào cơ sở dữ liệu vector.
+2. **Khởi động Bot (Chat/Web App)**: Chạy ứng dụng để bắt đầu trò chuyện dựa trên kho tri thức.
 
-Chúng ta có 2 cách để chạy chương trình: Chạy thủ công hoặc sử dụng Bash script có sẵn (`run_bot.sh`).
+### 1. Nạp dữ liệu vào Chatbot (Ingest)
 
-### Cách 1: Chạy tự động thông qua Script (Dành cho macOS/Linux)
-
-Chỉ cần chạy file script `run_bot.sh`. File này sẽ tự động kích hoạt môi trường ảo (venv), nạp dữ liệu từ `sample_data.txt` vào cơ sở dữ liệu và gọi bot lên.
+Sử dụng script `Source/ingest.py` để phân tích và xử lý tài liệu. LlamaIndex sẽ tự động nhận diện và OCR hình ảnh nếu có. Bạn có thể truyền vào đường dẫn đến một file cụ thể hoặc một thư mục.
 
 ```bash
-chmod +x run_bot.sh
-./run_bot.sh
+python Source/ingest.py <đường_dẫn_file_hoặc_thư_mục>
 ```
+*Ví dụ:* `python Source/ingest.py Input_data/`
+*(Lưu ý: Quá trình này sẽ gửi request đến Gemini để trích xuất văn bản/bảng biểu từ hình ảnh. Sau khi hoàn tất, CSDL vector sẽ được lưu tại thư mục `chroma_db`).*
 
-### Cách 2: Chạy thủ công (Dành cho mọi hệ điều hành)
+### 2. Sử dụng Chatbot trên Terminal (CLI)
 
-Nếu bạn không thể chạy bash script hoặc muốn sử dụng một tệp dữ liệu khác, bạn có thể chạy theo các lệnh sau (Đảm bảo đã kích hoạt thư mục venv):
+Sau khi đã nạp dữ liệu thành công, chạy lệnh sau để trò chuyện trực tiếp với bot trên cửa sổ Terminal:
 
-**1. Nạp dữ liệu vào Chatbot:**
-Chạy file `ingest.py` cùng với đường dẫn đến file văn bản chứa nội dung bạn muốn chatbot ghi nhớ:
 ```bash
-python ingest.py sample_data.txt
+python Source/chatbot.py
 ```
-*(Chương trình sẽ hiển thị "Chatbot Loading... Done!" khi dữ liệu đã được nạp thành công vào thư mục `chroma_db`).*
+*(Gõ câu hỏi của bạn và nhấn Enter. Để thoát ứng dụng, hãy gõ `exit` hoặc `quit`).*
 
-**2. Khởi động Chatbot:**
-Sau khi đã nạp dữ liệu, chạy lệnh sau để trò chuyện với bot:
+### 3. Khởi động Web API Server (FastAPI)
+
+Nếu bạn muốn chạy hệ thống dưới dạng web server để tương tác qua giao diện web, sử dụng lệnh sau:
+
 ```bash
-python chatbot.py
+python webapp.py
 ```
-*(Chờ đến khi hiện dòng chữ `Chatbot is already! Please ask. Type 'exit' or 'quit' to out.`)*
-
-Gõ câu hỏi của bạn và nhấn Enter. Để thoát ứng dụng, hãy gõ `exit` hoặc `quit`.
+Server sẽ chạy trên `http://0.0.0.0:8000` (hoặc cổng được cấu hình).
+- Web App sẽ tự động nạp RAG Chain vào bộ nhớ khi khởi động.
+- Trang web tĩnh (nếu có trong mục `/static`) sẽ được phục vụ tại endpoint gốc `/`.
+- API Endpoint để gọi chat là `POST /api/chat` với dạng JSON: `{ "message": "Câu hỏi của bạn" }`.
 
 ---
 
-## Lưu ý
+## Triển khai (Deployment)
 
-- **Dữ liệu Vector**: Lịch sử dữ liệu nạp vào được lưu ở thư mục `chroma_db`. Mỗi lần bạn chạy file `ingest.py`, file cũ sẽ bị xóa cài đè để bot chỉ tập trung vào dữ liệu mới nhất.
-- **Tốc độ phản hồi**: Thời gian chờ câu trả lời phụ thuộc vào cấu hình máy tính (Ollama/Llama 3 được xử lý cục bộ trên thiết bị của bạn).
+Dự án đã được cấu hình sẵn file `render.yaml` và `webapp.py` để hỗ trợ triển khai liền mạch lên nền tảng đám mây [Render](https://render.com/).
+1. Commit và đẩy toàn bộ mã nguồn lên kho lưu trữ GitHub của bạn.
+2. Tại bảng điều khiển Render, tạo mới dựa trên Blueprint (chọn kết nối repo này). Render sẽ tự động đọc `render.yaml` để thiết lập Web Service.
+3. **Quan trọng**: Đảm bảo bạn đã thêm biến môi trường `GEMINI_API_KEY` vào mục Environment Variables trên Render Dashboard.
+
+---
+
