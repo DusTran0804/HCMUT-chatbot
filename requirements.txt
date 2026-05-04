@@ -11,3 +11,7 @@ google-generativeai>=0.8.0
 python-dotenv
 aiofiles
 gunicorn
+llama-index
+llama-index-multi-modal-llms-gemini
+llama-index-readers-file
+llama-parse
