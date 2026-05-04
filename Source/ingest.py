@@ -38,16 +38,22 @@ def ingest_data(file_path):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
              raise ValueError("GEMINI_API_KEY not found!")
-        gemini_mm = GoogleGenAI(model="gemini-2.5-flash", api_key=api_key)
+         gemini_mm = GoogleGenAI(
+            model="gemini-2.5-flash", 
+            api_key=api_key,
+            temperature=0.0, 
+            max_tokens=8192  
+        )
 
     for doc in llama_docs:
         if isinstance(doc, ImageDocument) or getattr(doc, "image_path", None) is not None or doc.metadata.get("file_name", "").lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
             prompt = (
-               "Bạn là một hệ thống trích xuất dữ liệu chuyên nghiệp. "
-                "Hãy trích xuất toàn bộ văn bản, số liệu, bảng biểu có trong hình ảnh này. "
-                "Đặc biệt chú ý: Nếu hình ảnh chứa BẢNG BIỂU (Table), TUYỆT ĐỐI KHÔNG dùng định dạng kẻ bảng Markdown. "
-                "Thay vào đó, hãy liệt kê từng dòng thành một câu văn hoàn chỉnh, lặp lại đầy đủ ngữ cảnh từ tiêu đề bảng.\n"
-                "Hãy làm tương tự cho tất cả các dòng để hệ thống RAG không bị mất ngữ cảnh khi dữ liệu bị cắt nhỏ."
+                "Bạn là một chuyên gia phân tích tài liệu. Hãy trả lời câu hỏi dựa trên các đoạn văn bản được cung cấp."
+                "Bạn là một cỗ máy trích xuất dữ liệu quang học (OCR). "
+                "NHIỆM VỤ CỦA BẠN: Trích xuất chính xác 100% mọi văn bản và số liệu trong hình ảnh. "
+                "NẾU HÌNH ẢNH LÀ DẠNG BẢNG: Bạn phải kiên nhẫn đọc TỪNG DÒNG MỘT từ trên xuống dưới và liệt kê TẤT CẢ các dòng.\n"
+                "Với mỗi dòng trong bảng, hãy ghép với tiêu đề cột và tiêu đề bảng thành một câu văn hoàn chỉnh, KHÔNG dùng bảng Markdown.\n"
+                "Hãy làm tương tự cho TOÀN BỘ các dòng trong bảng. Đừng bỏ sót một dòng nào!"
             )
             try:
                 response = gemini_mm.complete(prompt=prompt, image_documents=[doc])
