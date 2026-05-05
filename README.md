@@ -110,3 +110,6 @@ Dự án đã được cấu hình sẵn file `render.yaml` và `webapp.py` đ�
 
 ---
 
+## Lưu ý quan trọng
+- **Xóa và nạp lại dữ liệu (Ingest)**: Mỗi khi bạn chạy file `ingest.py`, thư mục cơ sở dữ liệu `chroma_db` hiện tại sẽ bị **xóa toàn bộ và ghi đè mới**. Nếu bạn muốn thêm dữ liệu, hãy gom tất cả tài liệu vào chung một thư mục và chạy nạp một lần.
+- **Giới hạn Rate Limit của API**: Tính năng Multimodal xử lý hình ảnh phức tạp có thể gửi một lượng lớn request. Hãy cẩn thận với Rate Limit nếu bạn sử dụng luồng nạp hàng trăm file hình ảnh trên API Key loại miễn phí.
