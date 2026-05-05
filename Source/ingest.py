@@ -20,9 +20,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 persist_directory = os.path.join(os.path.dirname(current_dir), "chroma_db")
 
 def ingest_data(file_path):
-    print(f"📂 Bắt đầu ingest dữ liệu từ: {file_path}")
     if not os.path.exists(file_path):
-        print(f"❌ LỖI: Đường dẫn không tồn tại: {file_path}")
         return
 
     api_key = os.getenv("GEMINI_API_KEY")
@@ -37,11 +35,9 @@ def ingest_data(file_path):
             llama_docs = SimpleDirectoryReader(input_dir=file_path, recursive=True, exclude_hidden=False).load_data()
         else:
             llama_docs = SimpleDirectoryReader(input_files=[file_path]).load_data()
-        print(f"📄 Đã đọc được {len(llama_docs)} tài liệu từ LlamaIndex")
         for d in llama_docs:
             print(f"   - {d.metadata.get('file_name', '?')} (type: {type(d).__name__})")
     except Exception as e:
-        print(f"❌ LỖI khi đọc file: {e}")
         return
         
     documents = []
@@ -90,18 +86,15 @@ def ingest_data(file_path):
                 else:
                     documents.append(LangchainDocument(page_content=doc.text, metadata={"source": doc.metadata.get("file_name", file_path)}))
             except Exception as e:
-                print(f"❌ Error processing image {doc.metadata.get('file_name', '')}: {e}")
                 import traceback
                 traceback.print_exc()
         else:
             documents.append(LangchainDocument(page_content=doc.text, metadata={"source": doc.metadata.get("file_name", file_path)}))
 
-    print(f"\n📊 Tổng số documents sau xử lý: {len(documents)}")
     for i, doc in enumerate(documents):
         print(f"   Doc {i+1}: source={doc.metadata.get('source', '?')}, length={len(doc.page_content)} chars")
     
     if not documents:
-        print("❌ Không có documents nào để ingest!")
         return
  
     text_splitter = RecursiveCharacterTextSplitter(
@@ -129,7 +122,6 @@ def ingest_data(file_path):
         for i in range(0, total_chunks, batch_size):
             batch = chunks[i:i+batch_size]
             db.add_documents(batch)
-            print(f"   ✅ Đã thêm batch {i//batch_size + 1}: {len(batch)} chunks")
     except Exception as e:
         raise e
 
@@ -139,4 +131,3 @@ if __name__ == "__main__":
     else:
         file_path = sys.argv[1]
         ingest_data(file_path)
-        print("\n🎉 Ingest hoàn tất!")
