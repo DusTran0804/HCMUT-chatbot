@@ -105,7 +105,7 @@ def ingest_data(file_path):
     #     add_start_index=True,
     # )
     text_splitter = SemanticChunker(
-        embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001"),
+        embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001"),
         breakpoint_threshold_amount = 0.85
     )
     chunks = text_splitter.split_documents(documents)
