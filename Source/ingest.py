@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.documents import Document as LangchainDocument
@@ -97,11 +98,15 @@ def ingest_data(file_path):
     if not documents:
         return
  
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1500,
-        chunk_overlap=300,
-        length_function=len,
-        add_start_index=True,
+    # text_splitter = RecursiveCharacterTextSplitter(
+    #     chunk_size=1500,
+    #     chunk_overlap=300,
+    #     length_function=len,
+    #     add_start_index=True,
+    # )
+    text_splitter = SemanticChunker(
+        embeddings_model = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001"),
+        breakpoint_threshold_amount = 0.85
     )
     chunks = text_splitter.split_documents(documents)
 
